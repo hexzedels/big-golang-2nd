@@ -1,0 +1,150 @@
+openapi: 3.0.1
+info:
+  title: Scheduler API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8090
+paths:
+  /jobs:
+    post:
+      summary: Create a new job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCreate'
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid input
+    get:
+      summary: List jobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/Status'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+  /jobs/{job_id}:
+    get:
+      summary: Get job details
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+    delete:
+      summary: Delete a job
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Job deleted
+        '404':
+          description: Job not found
+
+  /jobs/{job_id}/executions:
+    get:
+      summary: Get job executions
+      parameters:
+        - name: worker_id
+          in: query
+          schema:
+            type: string
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+components:
+  schemas:
+    JobCreate:
+      type: object
+      properties:
+        once:
+          type: string
+        interval:
+          type: string
+        payload:
+          type: object
+    Job:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - lastFinishedAt
+        - payload
+      properties:
+        id:
+          type: string
+        once:
+          type: string
+        interval:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        createdAt:
+          type: integer
+          format: int64
+        payload:
+          type: object
+
+    Status:
+      type: string
+      enum: [queued, running, completed, failed]
+
+    Execution:
+      type: object
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        workerId:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: integer
+          format: int64
+        finishedAt:
+          type: integer
+          format: int64
