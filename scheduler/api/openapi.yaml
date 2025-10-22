@@ -124,6 +124,9 @@ components:
         createdAt:
           type: integer
           format: int64
+        lastFinishedAt:
+          type: integer
+          format: int64
         payload:
           type: object
 

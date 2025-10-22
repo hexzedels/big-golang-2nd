@@ -23,12 +23,13 @@ type Execution struct {
 
 // Job defines model for Job.
 type Job struct {
-	CreatedAt int64                  `json:"createdAt"`
-	Id        string                 `json:"id"`
-	Interval  *string                `json:"interval,omitempty"`
-	Once      *string                `json:"once,omitempty"`
-	Payload   map[string]interface{} `json:"payload"`
-	Status    Status                 `json:"status"`
+	CreatedAt      int64                  `json:"createdAt"`
+	Id             string                 `json:"id"`
+	Interval       *string                `json:"interval,omitempty"`
+	LastFinishedAt int64                  `json:"lastFinishedAt"`
+	Once           *string                `json:"once,omitempty"`
+	Payload        map[string]interface{} `json:"payload"`
+	Status         Status                 `json:"status"`
 }
 
 // JobCreate defines model for JobCreate.
