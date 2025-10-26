@@ -128,26 +128,60 @@ components:
           type: integer
           format: int64
         payload:
-          type: object
+          $ref: '#/components/schemas/JobPayload'
 
-    Status:
-      type: string
-      enum: [queued, running, completed, failed]
+    JobPayload:
+      type: object
+      # TODO: Might change format in future
 
     Execution:
       type: object
+      required:
+        - id
+        - jobID
+        - status
+        - queuedAt
+        - startedAt
+        - finishedAt
       properties:
         id:
           type: string
-        jobId:
+        jobID:
           type: string
-        workerId:
+        jobPayload:
+          $ref: '#/components/schemas/JobPayload'
+        workerID:
+          description: |
+            ID of worker that completed execution. 
+            Might be null if job execution was never taken by worker.
           type: string
         status:
-          type: string
+          $ref: '#/components/schemas/Status'
+        queuedAt:
+          type: integer
+          format: int64
         startedAt:
           type: integer
           format: int64
         finishedAt:
           type: integer
           format: int64
+        error:
+          $ref: '#/components/schemas/Error'
+
+    Status:
+      type: string
+      enum: [queued, running, completed, failed]
+    
+    Error:
+      type: object
+      required:
+        # - code
+        - details
+      properties:
+      # TODO: Might introduce code in future
+        # code:
+        #   type: string
+        #   enum: ["general", ""]
+        details:
+          type: string

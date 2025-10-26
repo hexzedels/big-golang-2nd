@@ -11,25 +11,36 @@ const (
 	Running   Status = "running"
 )
 
+// Error defines model for Error.
+type Error struct {
+	Details string `json:"details"`
+}
+
 // Execution defines model for Execution.
 type Execution struct {
-	FinishedAt *int64  `json:"finishedAt,omitempty"`
-	Id         *string `json:"id,omitempty"`
-	JobId      *string `json:"jobId,omitempty"`
-	StartedAt  *int64  `json:"startedAt,omitempty"`
-	Status     *string `json:"status,omitempty"`
-	WorkerId   *string `json:"workerId,omitempty"`
+	Error      *Error      `json:"error,omitempty"`
+	FinishedAt int64       `json:"finishedAt"`
+	Id         string      `json:"id"`
+	JobID      string      `json:"jobID"`
+	JobPayload *JobPayload `json:"jobPayload,omitempty"`
+	QueuedAt   int64       `json:"queuedAt"`
+	StartedAt  int64       `json:"startedAt"`
+	Status     Status      `json:"status"`
+
+	// WorkerID ID of worker that completed execution.
+	// Might be null if job execution was never taken by worker.
+	WorkerID *string `json:"workerID,omitempty"`
 }
 
 // Job defines model for Job.
 type Job struct {
-	CreatedAt      int64                  `json:"createdAt"`
-	Id             string                 `json:"id"`
-	Interval       *string                `json:"interval,omitempty"`
-	LastFinishedAt int64                  `json:"lastFinishedAt"`
-	Once           *string                `json:"once,omitempty"`
-	Payload        map[string]interface{} `json:"payload"`
-	Status         Status                 `json:"status"`
+	CreatedAt      int64      `json:"createdAt"`
+	Id             string     `json:"id"`
+	Interval       *string    `json:"interval,omitempty"`
+	LastFinishedAt int64      `json:"lastFinishedAt"`
+	Once           *string    `json:"once,omitempty"`
+	Payload        JobPayload `json:"payload"`
+	Status         Status     `json:"status"`
 }
 
 // JobCreate defines model for JobCreate.
@@ -38,6 +49,9 @@ type JobCreate struct {
 	Once     *string                 `json:"once,omitempty"`
 	Payload  *map[string]interface{} `json:"payload,omitempty"`
 }
+
+// JobPayload defines model for JobPayload.
+type JobPayload = map[string]interface{}
 
 // Status defines model for Status.
 type Status string
