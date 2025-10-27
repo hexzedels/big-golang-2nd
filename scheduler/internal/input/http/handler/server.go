@@ -2,20 +2,36 @@ package handler
 
 import (
 	"context"
+	"net/http"
 	"scheduler/scheduler/internal/cases"
 	"scheduler/scheduler/internal/input/http/gen"
+
+	"github.com/go-chi/chi/v5"
 )
 
 var _ gen.StrictServerInterface = (*Server)(nil)
+var _ http.Handler = (*Server)(nil)
 
 type Server struct {
 	schedulerCase *cases.SchedulerCase
+	router        *chi.Mux
 }
 
 func NewServer(schCase *cases.SchedulerCase) *Server {
-	return &Server{
+	s := &Server{
 		schedulerCase: schCase,
+		router:        chi.NewRouter(),
 	}
+
+	strictHandler := gen.NewStrictHandler(s, nil)
+
+	gen.HandlerFromMux(strictHandler, s.router)
+
+	return s
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.router.ServeHTTP(w, r)
 }
 
 // Create a new job
@@ -32,23 +48,28 @@ func (r *Server) PostJobs(ctx context.Context, request gen.PostJobsRequestObject
 // List jobs
 // (GET /jobs)
 func (r *Server) GetJobs(ctx context.Context, request gen.GetJobsRequestObject) (gen.GetJobsResponseObject, error) {
-	panic("not implemented") // TODO: Implement
+	// TODO: вернуть задание по id
+	return gen.GetJobs200JSONResponse{}, nil
+
 }
 
 // Delete a job
 // (DELETE /jobs/{job_id})
 func (r *Server) DeleteJobsJobId(ctx context.Context, request gen.DeleteJobsJobIdRequestObject) (gen.DeleteJobsJobIdResponseObject, error) {
-	panic("not implemented") // TODO: Implement
+	// TODO: удалить задание
+	return gen.DeleteJobsJobId204Response{}, nil
 }
 
 // Get job details
 // (GET /jobs/{job_id})
 func (r *Server) GetJobsJobId(ctx context.Context, request gen.GetJobsJobIdRequestObject) (gen.GetJobsJobIdResponseObject, error) {
-	panic("not implemented") // TODO: Implement
+	// TODO: реализовать поиск работы по идентификатору
+	return gen.GetJobsJobId200JSONResponse{}, nil
 }
 
 // Get job executions
 // (GET /jobs/{job_id}/executions)
 func (r *Server) GetJobsJobIdExecutions(ctx context.Context, request gen.GetJobsJobIdExecutionsRequestObject) (gen.GetJobsJobIdExecutionsResponseObject, error) {
-	panic("not implemented") // TODO: Implement
+	// реализовать поиск выполненных задач
+	return gen.GetJobsJobIdExecutions200JSONResponse{}, nil
 }
