@@ -2,15 +2,18 @@ package repo
 
 import (
 	"context"
+	"errors"
+	"scheduler/scheduler/internal/entity"
+)
+
+var (
+	ErrJobNotFound = errors.New("job not found")
 )
 
 type Jobs interface {
-	Create(ctx context.Context, job *JobDTO) error
-	Read(ctx context.Context, jobID string) (*JobDTO, error)
-	// Update
+	Upsert(ctx context.Context, jobs []*entity.Job) error
+	Create(ctx context.Context, job *entity.Job) error
+	Read(ctx context.Context, jobID string) (*entity.Job, error)
+	List(ctx context.Context) ([]*entity.Job, error)
 	// Delete
-}
-
-type JobDTO struct {
-	// Interface specific entity-like struct
 }

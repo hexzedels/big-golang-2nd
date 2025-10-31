@@ -11,13 +11,16 @@ require (
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/pressly/goose/v3 v3.26.0
+	go.uber.org/zap v1.27.0
 )
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
