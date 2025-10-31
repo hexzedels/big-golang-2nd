@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Start scheduler",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/scheduler/cmd/main.go",
+            "env": {
+                "NATS_URL":"nats://nats:4222",
+                "SCHEDULER_INTERVAL":"10s"
+            }
+        }
+    ]
+}

@@ -1,15 +1,57 @@
 services:
-  scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile
+#   scheduler:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     ports:
+#       - "8090:8090"
+#     environment:
+#       - SCHEDULER_INTERVAL=10s
+#       - NATS_URL=nats://nats:4222
+#     depends_on:
+#       - nats
+#     restart: unless-stopped
+
+  nats:
+    image: nats:latest
+    network_mode: host
     ports:
-      - "8090:8090"
-    environment:
-      - SCHEDULER_INTERVAL=10s
-    # depends_on:
-      # - postgres
+      - "4222:4222"
+      - "8222:8222"
+    command:
+      - "-js"
+      - "-sd"
+      - "/data"
+      - "-m"
+      - "8222"
+    volumes:
+      - nats_data:/data
     restart: unless-stopped
+
+  # Initialize NATS JetStream with jobs stream
+  nats-init:
+    image: natsio/nats-box:latest
+    depends_on:
+      - nats
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sleep 5
+        nats stream add JOBS \
+          --server=nats://nats:4222 \
+          --subjects "JOBS.*" \
+          --storage file \
+          --retention work \
+          --max-age 1d \
+          --replicas 1 \
+          --discard old \
+          --max-msgs=-1 \
+          --max-bytes=-1 \
+          --max-msg-size=-1 \
+          --dupe-window 2m \
+          --defaults
+        echo "NATS JetStream initialized with JOBS stream"
+    restart: "no"
 
 #   postgres:
 #     image: postgres:16-alpine
@@ -23,6 +65,6 @@ services:
 #       - postgres_data:/var/lib/postgresql/data
 #     restart: unless-stopped
 
-# volumes:
+volumes:
+  nats_data:
 #   postgres_data:
-

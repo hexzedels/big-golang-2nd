@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
+	github.com/nats-io/nats.go v1.47.0
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/pressly/goose/v3 v3.26.0
 	go.uber.org/zap v1.27.0
@@ -25,9 +26,12 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/nats-io/nkeys v0.4.11 // indirect
+	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.5.0 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
@@ -40,6 +44,7 @@ require (
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

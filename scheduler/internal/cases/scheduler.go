@@ -123,7 +123,9 @@ func (r *SchedulerCase) runJob(ctx context.Context, j *entity.Job) {
 		Cancel: cancel,
 	}
 
-	if err := r.publisher.Publish(ctx, j); err != nil {
-		r.logger.Error("publish job", zap.Error(err))
+	if r.publisher != nil {
+		if err := r.publisher.Publish(ctx, j); err != nil {
+			r.logger.Error("publish job", zap.Error(err))
+		}
 	}
 }
