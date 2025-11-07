@@ -16,9 +16,9 @@ import (
 var _ port.JobPublisher = (*NATSJobPublisher)(nil)
 
 type NATSJobPublisher struct {
-	js     jetstream.JetStream
-	stream jetstream.Stream
-	log    *zap.Logger
+	js jetstream.JetStream
+	// stream jetstream.Stream
+	log *zap.Logger
 }
 
 func NewNATSJobPublisher(ctx context.Context, log *zap.Logger, natsURL string) (*NATSJobPublisher, error) {
@@ -28,22 +28,21 @@ func NewNATSJobPublisher(ctx context.Context, log *zap.Logger, natsURL string) (
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
-	newJS, _ := jetstream.New(nc)
-
-	stream, err := newJS.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:     "JOBS",
-		Subjects: []string{"JOBS.*"},
-	})
+	newJS, err := jetstream.New(nc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create or update stream: %w", err)
+		return nil, fmt.Errorf("failed to create jetstream context: %w", err)
+	}
+
+	streams := newJS.ListStreams(ctx)
+	for stream := range streams.Info() {
+		log.Info("Stream", zap.Any("name", stream.Config))
 	}
 
 	log.Info("Connected to NATS JetStream", zap.String("url", natsURL))
 
 	return &NATSJobPublisher{
-		js:     newJS,
-		stream: stream,
-		log:    log,
+		js:  newJS,
+		log: log,
 	}, nil
 }
 

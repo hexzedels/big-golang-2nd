@@ -21,7 +21,12 @@ func NewServer(schCase *cases.SchedulerCase) *Server {
 // Create a new job
 // (POST /jobs)
 func (r *Server) PostJobs(ctx context.Context, request gen.PostJobsRequestObject) (gen.PostJobsResponseObject, error) {
-	jobID, err := r.schedulerCase.Create(ctx, toEntityJob(request.Body))
+	job, err := toEntityJob(request.Body)
+	if err != nil {
+		return nil, err // 500
+	}
+
+	jobID, err := r.schedulerCase.Create(ctx, job)
 	if err != nil {
 		return nil, err // 500
 	}

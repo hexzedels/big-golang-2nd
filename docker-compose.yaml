@@ -1,20 +1,42 @@
 services:
-#   scheduler:
-#     build:
-#       context: .
-#       dockerfile: Dockerfile
-#     ports:
-#       - "8090:8090"
-#     environment:
-#       - SCHEDULER_INTERVAL=10s
-#       - NATS_URL=nats://nats:4222
-#     depends_on:
-#       - nats
-#     restart: unless-stopped
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: scheduler
+    ports:
+      - "8090:8090"
+    environment:
+      - PG_DSN=postgres://scheduler:scheduler@postgres:5432/scheduler?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - SCHEDULER_INTERVAL=10s
+      - HTTP_PORT=8090
+    depends_on:
+      nats:
+        condition: service_started
+      nats-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      nats:
+        condition: service_started
+      nats-init:
+        condition: service_completed_successfully
+        
+    restart: unless-stopped
 
   nats:
     image: nats:latest
-    network_mode: host
     ports:
       - "4222:4222"
       - "8222:8222"
@@ -32,14 +54,17 @@ services:
   nats-init:
     image: natsio/nats-box:latest
     depends_on:
-      - nats
+      nats:
+        condition: service_started
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         sleep 5
         nats stream add JOBS \
           --server=nats://nats:4222 \
-          --subjects "JOBS.*" \
+          --subjects "JOBS.interval.*" \
+          --subjects "JOBS.once.*" \
+          --subjects "JOBS.completed" \
           --storage file \
           --retention work \
           --max-age 1d \
@@ -53,18 +78,24 @@ services:
         echo "NATS JetStream initialized with JOBS stream"
     restart: "no"
 
-#   postgres:
-#     image: postgres:16-alpine
-#     ports:
-#       - "5432:5432"
-#     environment:
-#       - POSTGRES_USER=scheduler
-#       - POSTGRES_PASSWORD=scheduler
-#       - POSTGRES_DB=scheduler
-#     volumes:
-#       - postgres_data:/var/lib/postgresql/data
-#     restart: unless-stopped
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=scheduler
+      - POSTGRES_PASSWORD=scheduler
+      - POSTGRES_DB=scheduler
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler -d scheduler"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
 
 volumes:
   nats_data:
-#   postgres_data:
+  postgres_data:

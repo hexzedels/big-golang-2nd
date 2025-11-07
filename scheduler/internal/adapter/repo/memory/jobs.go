@@ -68,3 +68,6 @@ func (r *JobsRepo) Upsert(ctx context.Context, jobs []*entity.Job) error {
 	return nil
 }
 
+
+
+

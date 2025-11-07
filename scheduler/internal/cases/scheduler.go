@@ -6,6 +6,7 @@ import (
 	"scheduler/scheduler/internal/entity"
 	"scheduler/scheduler/internal/port"
 	"scheduler/scheduler/internal/port/repo"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ type SchedulerCase struct {
 	running   map[string]*entity.RunningJob
 	publisher port.JobPublisher
 	interval  time.Duration
+	mx        sync.Mutex
 	logger    *zap.Logger
 }
 
@@ -46,7 +48,7 @@ func (r *SchedulerCase) Start(ctx context.Context) error {
 		select {
 		case <-time.NewTicker(r.interval).C:
 			if err := r.tick(ctx); err != nil {
-
+				r.logger.Error("process tick", zap.Error(err))
 			}
 		case <-ctx.Done():
 			return ctx.Err()
@@ -56,6 +58,8 @@ func (r *SchedulerCase) Start(ctx context.Context) error {
 
 func (r *SchedulerCase) tick(ctx context.Context) error {
 	// We fetch all job
+	r.mx.Lock()
+	defer r.mx.Unlock()
 
 	jobs, err := r.jobsRepo.List(ctx)
 	if err != nil {
@@ -67,9 +71,7 @@ func (r *SchedulerCase) tick(ctx context.Context) error {
 
 	repoJobs := make(map[string]*entity.Job, len(jobs))
 	for _, j := range jobs {
-		repoJobs[j.ID] = &entity.Job{
-			ID: j.ID,
-		}
+		repoJobs[j.ID] = j
 	}
 
 	for jobID, j := range r.running {
@@ -97,9 +99,11 @@ func (r *SchedulerCase) tick(ctx context.Context) error {
 				go r.runJob(ctx, j)
 			}
 		} else {
-			// Need to run once.
-			if j.LastFinishedAt == 0 && now > *j.Once {
-				go r.runJob(ctx, j)
+			if j.Once != nil {
+				// Need to run once.
+				if j.LastFinishedAt == 0 && now > *j.Once {
+					go r.runJob(ctx, j)
+				}
 			}
 		}
 
@@ -128,4 +132,46 @@ func (r *SchedulerCase) runJob(ctx context.Context, j *entity.Job) {
 			r.logger.Error("publish job", zap.Error(err))
 		}
 	}
+}
+
+// HandleJobCompletion handles job completion messages from workers
+func (r *SchedulerCase) HandleJobCompletion(ctx context.Context, jobID string, status string, finishedAt int64) error {
+	// Read the job from repository
+	job, err := r.jobsRepo.Read(ctx, jobID)
+	if err != nil {
+		return fmt.Errorf("read job: %w", err)
+	}
+
+	// Update job status and last finished time
+	switch status {
+	case entity.JobStatusCompleted:
+		job.Status = entity.JobStatusCompleted
+	case entity.JobStatusFailed:
+		job.Status = entity.JobStatusFailed
+	default:
+		return fmt.Errorf("unknown status: %s", status)
+	}
+
+	job.LastFinishedAt = finishedAt
+
+	// Remove from running jobs
+	r.mx.Lock()
+	defer r.mx.Unlock()
+
+	if runningJob, ok := r.running[jobID]; ok {
+		runningJob.Cancel()
+		delete(r.running, jobID)
+	}
+
+	// Update job in repository
+	if err := r.jobsRepo.Upsert(ctx, []*entity.Job{job}); err != nil {
+		return fmt.Errorf("upsert job: %w", err)
+	}
+
+	r.logger.Info("Job completion handled",
+		zap.String("job_id", jobID),
+		zap.String("status", status),
+		zap.Int64("finished_at", finishedAt))
+
+	return nil
 }

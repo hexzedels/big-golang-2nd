@@ -1,8 +1,8 @@
 package main
 
 import (
-	"scheduler/scheduler/config"
-	"scheduler/scheduler/internal/app"
+	"scheduler/worker/config"
+	"scheduler/worker/internal/app"
 )
 
 func main() {
