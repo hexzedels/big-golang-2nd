@@ -15,6 +15,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	upsertJobsQuery = `
+		INSERT INTO jobs (id, kind, status, interval_seconds, once_timestamp, last_finished_at, payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (id) DO UPDATE SET
+			status = EXCLUDED.status,
+			interval_seconds = EXCLUDED.interval_seconds,
+			last_finished_at = EXCLUDED.last_finished_at
+	`
+)
+
 var _ repo.Jobs = (*JobsRepo)(nil)
 
 type JobsRepo struct {
@@ -219,15 +230,6 @@ func (r *JobsRepo) Upsert(ctx context.Context, jobs []*entity.Job) error {
 		return nil
 	}
 
-	query := `
-		INSERT INTO jobs (id, kind, status, interval_seconds, once_timestamp, last_finished_at, payload)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (id) DO UPDATE SET
-			status = EXCLUDED.status,
-			interval_seconds = EXCLUDED.interval_seconds,
-			last_finished_at = EXCLUDED.last_finished_at
-	`
-
 	for _, job := range jobs {
 		payloadJSON, err := json.Marshal(job.Payload)
 		if err != nil {
@@ -240,7 +242,7 @@ func (r *JobsRepo) Upsert(ctx context.Context, jobs []*entity.Job) error {
 			intervalSeconds = &seconds
 		}
 
-		_, err = r.pool.Exec(ctx, query,
+		_, err = r.pool.Exec(ctx, upsertJobsQuery,
 			job.ID,
 			int(job.Kind),
 			string(job.Status),

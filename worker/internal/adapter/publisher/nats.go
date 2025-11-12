@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"scheduler/worker/internal/entity"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -35,14 +36,7 @@ func NewNATSCompletionPublisher(ctx context.Context, log *zap.Logger, natsURL st
 	}, nil
 }
 
-type JobCompletion struct {
-	JobID        string  `json:"jobId"`
-	Status       string  `json:"status"` // "completed" or "failed"
-	FinishedAt   int64   `json:"finishedAt"`
-	ErrorMessage *string `json:"errorMessage,omitempty"`
-}
-
-func (p *NATSCompletionPublisher) PublishCompletion(ctx context.Context, completion JobCompletion) error {
+func (p *NATSCompletionPublisher) PublishCompletion(ctx context.Context, completion *entity.JobCompletion) error {
 	data, err := json.Marshal(completion)
 	if err != nil {
 		return fmt.Errorf("failed to marshal completion: %w", err)

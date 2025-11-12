@@ -22,6 +22,7 @@ func Start(cfg config.Config) error {
 	}
 
 	jobsRepo := postgres.NewJobsRepo(pgPool)
+	execRepo := postgres.NewExecutionsRepo(pgPool)
 
 	log, err := zap.NewProduction()
 	if err != nil {
@@ -35,7 +36,13 @@ func Start(cfg config.Config) error {
 		log.Warn("Failed to create NATS publisher, continuing without publisher", zap.Error(err))
 	}
 
-	scheduler := cases.NewSchedulerCase(jobsRepo, pub, cfg.SchedulerInterval, log)
+	scheduler := cases.NewSchedulerCase(
+		jobsRepo,
+		execRepo,
+		pub,
+		cfg.SchedulerInterval,
+		log,
+	)
 	srv := handler.NewServer(scheduler)
 
 	// Start scheduler tick loop

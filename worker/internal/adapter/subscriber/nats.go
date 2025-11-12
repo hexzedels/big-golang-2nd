@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"scheduler/scheduler/pkg/entity"
-	"time"
+	pkgentity "scheduler/scheduler/pkg/entity"
+	"scheduler/worker/internal/entity"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -38,7 +38,9 @@ func NewNATSJobSubscriber(ctx context.Context, log *zap.Logger, natsURL string) 
 }
 
 // Subscribe subscribes to queued job subjects and calls handler for each job
-func (s *NATSJobSubscriber) Subscribe(ctx context.Context, handler func(ctx context.Context, job *entity.Job) error) error {
+func (s *NATSJobSubscriber) Subscribe(
+	ctx context.Context,
+	handler func(ctx context.Context, exec *entity.JobExecution) error) error {
 	// Subscribe to interval queued jobs
 	intervalCons, err := s.js.CreateOrUpdateConsumer(ctx, "JOBS", jetstream.ConsumerConfig{
 		FilterSubject: "JOBS.interval.queued",
@@ -65,7 +67,11 @@ func (s *NATSJobSubscriber) Subscribe(ctx context.Context, handler func(ctx cont
 	return nil
 }
 
-func (s *NATSJobSubscriber) processMessages(ctx context.Context, cons jetstream.Consumer, handler func(ctx context.Context, job *entity.Job) error) {
+func (s *NATSJobSubscriber) processMessages(
+	ctx context.Context,
+	cons jetstream.Consumer,
+	handler func(ctx context.Context, exec *entity.JobExecution) error,
+) {
 	iter, err := cons.Messages()
 	if err != nil {
 		s.log.Error("Failed to create message iterator", zap.Error(err))
@@ -84,14 +90,14 @@ func (s *NATSJobSubscriber) processMessages(ctx context.Context, cons jetstream.
 				continue
 			}
 
-			var dto jobDTO
+			var dto pkgentity.ExecutionDTO
 			if err := json.Unmarshal(msg.Data(), &dto); err != nil {
 				s.log.Error("Failed to unmarshal job", zap.Error(err))
 				msg.Nak()
 				continue
 			}
 
-			job, err := dto.toEntity()
+			job, err := toEntity(&dto)
 			if err != nil {
 				s.log.Error("Failed to convert DTO to entity", zap.Error(err))
 				msg.Nak()
@@ -110,44 +116,13 @@ func (s *NATSJobSubscriber) processMessages(ctx context.Context, cons jetstream.
 }
 
 // jobDTO is a JSON-serializable representation of a job
-type jobDTO struct {
-	ID             string  `json:"id"`
-	Kind           int     `json:"kind"`
-	Status         string  `json:"status"`
-	Interval       *string `json:"interval,omitempty"`
-	Once           *int64  `json:"once,omitempty"`
-	LastFinishedAt int64   `json:"lastFinishedAt"`
-	Payload        any     `json:"payload"`
-}
 
-func (d *jobDTO) toEntity() (*entity.Job, error) {
-	job := &entity.Job{
-		ID:             d.ID,
-		Kind:           entity.JobKind(d.Kind),
-		Status:         entity.JobStatus(d.Status),
-		LastFinishedAt: d.LastFinishedAt,
-		Payload:        d.Payload,
-	}
-
-	if d.Interval != nil {
-		duration, err := parseDuration(*d.Interval)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse interval: %w", err)
-		}
-		job.Interval = &duration
-	}
-
-	if d.Once != nil {
-		job.Once = d.Once
+func toEntity(exec *pkgentity.ExecutionDTO) (*entity.JobExecution, error) {
+	job := &entity.JobExecution{
+		ExecutionID: exec.ID,
+		JobID:       exec.JobID,
+		Payload:     exec.Payload,
 	}
 
 	return job, nil
-}
-
-func parseDuration(s string) (time.Duration, error) {
-	duration, err := time.ParseDuration(s)
-	if err != nil {
-		return 0, err
-	}
-	return duration, nil
 }

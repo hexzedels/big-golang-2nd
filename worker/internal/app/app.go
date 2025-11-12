@@ -3,11 +3,13 @@ package app
 import (
 	"context"
 	"fmt"
-	"scheduler/scheduler/pkg/entity"
+	"os"
+	"os/signal"
 	"scheduler/worker/config"
 	"scheduler/worker/internal/adapter/publisher"
 	"scheduler/worker/internal/adapter/subscriber"
-	"time"
+	"scheduler/worker/internal/cases"
+	"syscall"
 
 	"go.uber.org/zap"
 )
@@ -30,36 +32,19 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("new NATS completion publisher: %w", err)
 	}
 
+	workerCases := cases.NewWorker(nil, pub, log.Named("worker"))
 	// Subscribe to jobs and handle them
 	ctx := context.Background()
-	if err := sub.Subscribe(ctx, func(ctx context.Context, job *entity.Job) error {
-		// Log the received job
-		log.Info("Received job",
-			zap.String("job_id", job.ID),
-			zap.String("kind", fmt.Sprintf("%d", job.Kind)),
-			zap.String("status", string(job.Status)),
-			zap.Any("payload", job.Payload))
-
-		// Simulate job processing - just mark as completed
-		// In a real implementation, this would do actual work
-		completion := publisher.JobCompletion{
-			JobID:      job.ID,
-			Status:     "completed",
-			FinishedAt: time.Now().UnixMilli(),
-		}
-
-		// Publish completion message back to NATS
-		if err := pub.PublishCompletion(ctx, completion); err != nil {
-			log.Error("Failed to publish completion", zap.Error(err))
-			return err
-		}
-
-		return nil
-	}); err != nil {
+	if err := sub.Subscribe(ctx, workerCases.RunJob); err != nil {
 		return fmt.Errorf("subscribe to jobs: %w", err)
 	}
 
 	// Keep the worker running
 	log.Info("Worker started, waiting for jobs...")
-	select {}
+
+	sigChan := make(chan os.Signal, 1)
+
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	return nil
 }

@@ -6,5 +6,10 @@ import (
 )
 
 type JobPublisher interface {
-	Publish(ctx context.Context, job *entity.Job) error
+	Publish(
+		ctx context.Context,
+		kind entity.JobKind,
+		exec *entity.Execution,
+		jobPayload any,
+	) error
 }

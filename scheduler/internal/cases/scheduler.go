@@ -15,6 +15,7 @@ import (
 
 type SchedulerCase struct {
 	jobsRepo  repo.Jobs
+	execRepo  repo.Executions
 	running   map[string]*entity.RunningJob
 	publisher port.JobPublisher
 	interval  time.Duration
@@ -24,12 +25,14 @@ type SchedulerCase struct {
 
 func NewSchedulerCase(
 	jobsRepo repo.Jobs,
+	execRepo repo.Executions,
 	publisher port.JobPublisher,
 	interval time.Duration,
 	logger *zap.Logger,
 ) *SchedulerCase {
 	return &SchedulerCase{
 		jobsRepo:  jobsRepo,
+		execRepo:  execRepo,
 		running:   make(map[string]*entity.RunningJob),
 		publisher: publisher,
 		interval:  interval,
@@ -128,7 +131,18 @@ func (r *SchedulerCase) runJob(ctx context.Context, j *entity.Job) {
 	}
 
 	if r.publisher != nil {
-		if err := r.publisher.Publish(ctx, j); err != nil {
+		exec := &entity.Execution{
+			ID:       uuid.NewString(),
+			JobID:    j.ID,
+			Status:   entity.ExecutionStatusQueued,
+			QueuedAt: time.Now().UnixMilli(),
+		}
+		if err := r.execRepo.Upsert(ctx, exec); err != nil {
+			r.logger.Error("crate execution", zap.String("job_id", j.ID), zap.Error(err))
+			return
+		}
+
+		if err := r.publisher.Publish(ctx, j.Kind, exec, j.Payload); err != nil {
 			r.logger.Error("publish job", zap.Error(err))
 		}
 	}
